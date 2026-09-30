@@ -8,12 +8,12 @@
 <style>
   :root {
     --bg:#efe8e0; --card:#ffffff; --ink:#1f1b18; --muted:#7a6f66; --line:#e3dbd2;
-    --field:#faf7f3; --red:#c8102e; --red-dark:#a30d26; --head:#1c1917; --head-ink:#ffffff; --head-sub:#b9aea5;
+    --field:#faf7f3; --edge:#a89a8c; --red:#c8102e; --red-dark:#a30d26; --head:#1c1917; --head-ink:#ffffff; --head-sub:#b9aea5;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg:#141210; --card:#221e1b; --ink:#f3ede7; --muted:#a89f97; --line:#3a3430;
-      --field:#1a1714; --red:#e0384f; --red-dark:#c8102e; --head:#0d0b0a; --head-sub:#a89f97;
+      --field:#1a1714; --edge:#6e645b; --red:#e0384f; --red-dark:#c8102e; --head:#0d0b0a; --head-sub:#a89f97;
     }
   }
   * { box-sizing: border-box; }
@@ -26,20 +26,21 @@
   .head p { margin:2px 0 0; font-size:14px; color:var(--head-sub); }
 
   main { padding:14px; display:grid; gap:12px; }
-  .card { background:var(--card); border-radius:10px; padding:14px; box-shadow:0 1px 2px rgba(31,27,24,.08); }
+  .card { background:var(--card); border-radius:10px; padding:14px; border:1px solid var(--line); box-shadow:0 1px 3px rgba(31,27,24,.15); }
   .card.mail { border-left:4px solid var(--red); }
   .card h2 { margin:0 0 8px; font-size:18px; font-weight:700; }
   .mailsub { color:var(--muted); font-size:14px; margin-bottom:2px; }
   #mailinfo { font-weight:700; overflow-wrap:anywhere; }
 
-  textarea { width:100%; padding:10px; border:1px solid var(--line); border-radius:8px; background:var(--field); color:var(--ink); font:inherit; resize:vertical; }
+  textarea { width:100%; padding:10px; border:2px solid var(--edge); border-radius:8px; background:var(--field); color:var(--ink); font:inherit; resize:vertical; }
   textarea::placeholder { color:var(--muted); }
-  textarea:focus-visible, button:focus-visible { outline:2px solid var(--red); outline-offset:2px; }
+  textarea:focus, textarea:focus-visible { border-color:var(--red); outline:none; }
+  button:focus-visible { outline:2px solid var(--red); outline-offset:2px; }
 
   .row { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
   button { padding:9px 16px; border-radius:8px; border:1px solid var(--red); background:var(--red); color:#fff; font:inherit; font-weight:700; cursor:pointer; }
   button:hover:not(:disabled) { background:var(--red-dark); border-color:var(--red-dark); }
-  button.secondary { background:transparent; color:var(--ink); border-color:var(--line); }
+  button.secondary { background:transparent; color:var(--ink); border:2px solid var(--edge); }
   button.secondary:hover:not(:disabled) { background:var(--field); border-color:var(--muted); }
   button:disabled { opacity:.45; cursor:default; }
 
