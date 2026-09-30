@@ -65,28 +65,29 @@
     </section>
 
     <section class="card">
-      <h2>Stichwörter für die Antwort</h2>
-      <textarea id="keywords" rows="3" aria-label="Stichwörter für die Antwort" placeholder="z. B. Bestellung ist vorgemerkt, Abholung Freitag ab 8 Uhr"></textarea>
-      <div class="row">
-        <button id="create" disabled>Antwort erstellen</button>
-      </div>
-      <div id="status" role="status"></div>
-    </section>
-
-    <section class="card">
       <h2>Antwortvorschlag</h2>
+      <div class="row" style="margin-top:0; margin-bottom:10px;">
+        <button id="create" disabled>Vorschlag erstellen</button>
+      </div>
       <textarea id="answer" rows="10" aria-label="Antwortvorschlag"></textarea>
       <div class="row">
         <button id="open" class="secondary" disabled>Als Antwort öffnen</button>
         <button id="copy" class="secondary" disabled>Kopieren</button>
       </div>
+      <div id="status" role="status"></div>
+    </section>
+
+    <section class="card">
+      <h2>Antwort anpassen <span style="font-size:14px; font-weight:400; color:var(--muted);">(optional)</span></h2>
+      <textarea id="keywords" rows="3" aria-label="Optionale Hinweise für die Antwort" placeholder="z. B. kürzer formulieren, 10 € Gutschein anbieten, Abholung Freitag ab 8 Uhr bestätigen"></textarea>
+      <div class="row">
+        <button id="adjust" disabled>Antwort anpassen</button>
+      </div>
     </section>
   </main>
 
 <script>
-  // Production-URL des n8n-Webhooks (Gemini-Flow)
   const WEBHOOK_URL = "https://n8n.raischflow.com/webhook/Raisch-Mail-Assistent";
-
   const $ = (id) => document.getElementById(id);
   let mailText = "";
 
@@ -95,12 +96,18 @@
     $("status").className = isError ? "error" : "";
   }
 
-  function loadItem() {
-    const item = Office.context.mailbox.item;
-    mailText = "";
+  function resetAnswer() {
     $("answer").value = "";
     $("open").disabled = true;
     $("copy").disabled = true;
+    $("adjust").disabled = true;
+  }
+
+  function loadItem() {
+    const item = Office.context.mailbox.item;
+    mailText = "";
+    resetAnswer();
+    $("keywords").value = "";
 
     if (!item) {
       $("mailinfo").textContent = "Keine Mail ausgewählt";
@@ -113,52 +120,53 @@
     $("create").disabled = true;
     setStatus("Mail wird geladen ...");
 
-    // Office.CoercionType.Text ist für Mailbox-Items die kompatiblere Variante.
     item.body.getAsync(Office.CoercionType.Text, function (res) {
       if (res.status === Office.AsyncResultStatus.Succeeded) {
         const body = (res.value || "").trim();
         mailText = "Betreff: " + (item.subject || "") + "\n\n" + body;
-
         if (body) {
           $("create").disabled = false;
-          setStatus("Bereit.");
+          setStatus("Bereit – Vorschlag kann erstellt werden.");
         } else {
-          $("create").disabled = true;
           setStatus("Die E-Mail enthält keinen lesbaren Text.", true);
         }
       } else {
-        $("create").disabled = true;
-        const detail = res.error && res.error.message
-          ? " (" + res.error.message + ")"
-          : "";
+        const detail = res.error && res.error.message ? " (" + res.error.message + ")" : "";
         setStatus("Mailtext konnte nicht gelesen werden." + detail, true);
       }
     });
   }
 
-  async function createAnswer() {
-    const keywords = $("keywords").value.trim();
+  function extractAnswer(raw) {
+    let answer = raw.trim();
+    try {
+      const data = JSON.parse(raw);
+      answer = data.answer ?? data.antwort ?? data.output ?? data.text ?? data.message ?? raw;
+      if (typeof answer !== "string") answer = JSON.stringify(answer, null, 2);
+    } catch (_) {}
+    return answer.trim();
+  }
 
+  async function requestAnswer(keywords, isAdjustment) {
     if (!mailText) {
       setStatus("Die E-Mail ist noch nicht vollständig geladen.", true);
       return;
     }
-    if (!keywords) {
-      setStatus("Bitte zuerst Stichwörter für die Antwort eingeben.", true);
+    if (isAdjustment && !keywords.trim()) {
+      setStatus("Bitte zuerst einen Hinweis zur Anpassung eingeben.", true);
       $("keywords").focus();
       return;
     }
 
     $("create").disabled = true;
-    $("open").disabled = true;
-    $("copy").disabled = true;
-    setStatus("Antwort wird erstellt ...");
+    $("adjust").disabled = true;
+    setStatus(isAdjustment ? "Antwort wird angepasst ..." : "Vorschlag wird erstellt ...");
 
     try {
       const r = await fetch(WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mail: mailText, keywords: keywords })
+        body: JSON.stringify({ mail: mailText, keywords: keywords.trim() })
       });
 
       if (!r.ok) {
@@ -167,44 +175,42 @@
           (serverText ? ": " + serverText.slice(0, 250) : ""));
       }
 
-      const raw = (await r.text()).trim();
-      let answer = raw;
-
-      // Falls n8n JSON statt reinem Text zurückgibt, typische Felder erkennen.
-      try {
-        const data = JSON.parse(raw);
-        answer =
-          data.answer ??
-          data.antwort ??
-          data.output ??
-          data.text ??
-          data.message ??
-          raw;
-        if (typeof answer !== "string") {
-          answer = JSON.stringify(answer, null, 2);
-        }
-      } catch (_) {
-        // Reiner Text ist ebenfalls korrekt.
-      }
-
-      answer = answer.trim();
+      const answer = extractAnswer(await r.text());
       if (!answer) throw new Error("n8n hat eine leere Antwort zurückgegeben.");
 
       $("answer").value = answer;
       $("open").disabled = false;
       $("copy").disabled = false;
-      setStatus("Fertig. Bitte vor dem Senden prüfen.");
+      $("adjust").disabled = false;
+      setStatus(isAdjustment
+        ? "Antwort angepasst. Bitte vor dem Senden prüfen."
+        : "Vorschlag erstellt. Optional unten anpassen.");
     } catch (e) {
       setStatus("Fehler: " + (e && e.message ? e.message : e), true);
+      $("adjust").disabled = !$("answer").value.trim();
     } finally {
       $("create").disabled = !mailText;
     }
   }
 
+  function createSuggestion() {
+    requestAnswer("", false);
+  }
+
+  function adjustAnswer() {
+    requestAnswer($("keywords").value, true);
+  }
+
   function openReply() {
-    const html = $("answer").value
+    const escaped = $("answer").value
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/\n/g, "<br>");
+
+    const html =
+      '<div style="font-family:Arial,sans-serif;font-size:11pt;">' +
+      escaped +
+      '</div><br>';
+
     Office.context.mailbox.item.displayReplyForm(html);
   }
 
@@ -224,22 +230,14 @@
       return;
     }
 
-    $("create").addEventListener("click", createAnswer);
+    $("create").addEventListener("click", createSuggestion);
+    $("adjust").addEventListener("click", adjustAnswer);
     $("open").addEventListener("click", openReply);
     $("copy").addEventListener("click", copyAnswer);
 
     if (Office.context.mailbox && Office.context.mailbox.addHandlerAsync) {
-      Office.context.mailbox.addHandlerAsync(
-        Office.EventType.ItemChanged,
-        loadItem,
-        function (result) {
-          if (result.status === Office.AsyncResultStatus.Failed) {
-            console.warn("ItemChanged konnte nicht registriert werden:", result.error);
-          }
-        }
-      );
+      Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, loadItem);
     }
-
     loadItem();
   }).catch(function (e) {
     setStatus("Outlook konnte nicht initialisiert werden: " +
