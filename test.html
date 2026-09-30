@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <title>Raisch Test</title>
+</head>
+<body style="font-family:Arial;padding:20px;">
+  <h2>🥨 Raisch Test</h2>
+  <div id="status">Office.js wird geladen ...</div>
+
+  <script>
+    setTimeout(function () {
+      const status = document.getElementById("status");
+      if (typeof Office === "undefined") {
+        status.innerHTML = "❌ Office.js wurde NICHT geladen.";
+        return;
+      }
+      if (status.innerHTML.indexOf("onReady") === -1) {
+        status.innerHTML = "🟡 Office.js geladen – warte auf Outlook ...";
+      }
+    }, 2000);
+
+    Office.onReady(function (info) {
+      const status = document.getElementById("status");
+      let text = "✅ Office.onReady ausgeführt<br><br>";
+      text += "Host: " + info.host + "<br>";
+      text += "Platform: " + info.platform + "<br><br>";
+      text += "Office.context: " + (Office.context ? "JA" : "NEIN") + "<br>";
+      text += "Mailbox: " + (Office.context && Office.context.mailbox ? "JA" : "NEIN") + "<br>";
+      text += "Item: " + (Office.context && Office.context.mailbox && Office.context.mailbox.item ? "JA" : "NEIN");
+      status.innerHTML = text;
+    });
+  </script>
+</body>
+</html>
