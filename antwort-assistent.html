@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raisch Antwort-Assistent</title>
+<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+<style>
+  :root { --ink:#2b2320; --muted:#6b625d; --line:#d9d2cc; --accent:#1f4e79; --bg:#ffffff; --field:#faf8f6; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#f1ece8; --muted:#a89f99; --line:#4a423d; --accent:#7db3e6; --bg:#1f1b19; --field:#2a2522; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:16px; background:var(--bg); color:var(--ink); font:14px/1.45 "Segoe UI", system-ui, sans-serif; }
+  h1 { font-size:17px; margin:0 0 4px; }
+  p.sub { margin:0 0 16px; color:var(--muted); }
+  label { display:block; font-weight:600; margin:14px 0 4px; }
+  textarea { width:100%; padding:8px; border:1px solid var(--line); border-radius:4px; background:var(--field); color:var(--ink); font:inherit; resize:vertical; }
+  textarea:focus-visible, button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .row { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  button { padding:8px 12px; border-radius:4px; border:1px solid var(--accent); background:var(--accent); color:#fff; font:inherit; cursor:pointer; }
+  @media (prefers-color-scheme: dark) { button { color:#10202e; } }
+  button.secondary { background:transparent; color:var(--accent); }
+  button:disabled { opacity:.5; cursor:default; }
+  #mailinfo { padding:8px; border-left:3px solid var(--line); color:var(--muted); margin-top:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #status { min-height:20px; margin-top:10px; color:var(--muted); }
+  #status.error { color:#b3261e; }
+</style>
+</head>
+<body>
+  <h1>Antwort-Assistent</h1>
+  <p class="sub">Stichwörter eingeben, Antwort erstellen lassen, prüfen, senden.</p>
+
+  <div id="mailinfo">Keine Mail ausgewählt</div>
+
+  <label for="keywords">Stichwörter für die Antwort</label>
+  <textarea id="keywords" rows="3" placeholder="z. B. Bestellung ist vorgemerkt, Abholung Freitag ab 8 Uhr"></textarea>
+
+  <div class="row">
+    <button id="create" disabled>Antwort erstellen</button>
+  </div>
+  <div id="status" role="status"></div>
+
+  <label for="answer">Antwortvorschlag</label>
+  <textarea id="answer" rows="10"></textarea>
+
+  <div class="row">
+    <button id="open" class="secondary" disabled>Als Antwort öffnen</button>
+    <button id="copy" class="secondary" disabled>Kopieren</button>
+  </div>
+
+<script>
+  // >>> HIER die Production-URL des n8n-Webhooks eintragen (nicht /webhook-test/) <<<
+  const WEBHOOK_URL = "https://n8n.raischflow.com/webhook/Raisch-Mail-Assistent";
+
+  const $ = (id) => document.getElementById(id);
+  let mailText = "";
+
+  function setStatus(msg, isError) {
+    $("status").textContent = msg || "";
+    $("status").className = isError ? "error" : "";
+  }
+
+  function loadItem() {
+    const item = Office.context.mailbox.item;
+    mailText = "";
+    $("answer").value = "";
+    $("open").disabled = true;
+    $("copy").disabled = true;
+    if (!item) {
+      $("mailinfo").textContent = "Keine Mail ausgewählt";
+      $("create").disabled = true;
+      return;
+    }
+    $("mailinfo").textContent = item.subject || "(ohne Betreff)";
+    item.body.getAsync(Office.CoreType.Text, function (res) {
+      if (res.status === Office.AsyncResultStatus.Succeeded) {
+        mailText = "Betreff: " + (item.subject || "") + "\n\n" + res.value;
+        $("create").disabled = false;
+        setStatus("");
+      } else {
+        $("create").disabled = true;
+        setStatus("Mailtext konnte nicht gelesen werden.", true);
+      }
+    });
+  }
+
+  async function createAnswer() {
+    $("create").disabled = true;
+    setStatus("Antwort wird erstellt ...");
+    try {
+      const r = await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mail: mailText, keywords: $("keywords").value })
+      });
+      if (!r.ok) throw new Error("Server antwortet mit Status " + r.status);
+      $("answer").value = (await r.text()).trim();
+      $("open").disabled = false;
+      $("copy").disabled = false;
+      setStatus("Fertig. Bitte vor dem Senden prüfen.");
+    } catch (e) {
+      setStatus("Fehler: " + e.message, true);
+    }
+    $("create").disabled = false;
+  }
+
+  function openReply() {
+    const html = $("answer").value
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/\n/g, "<br>");
+    Office.context.mailbox.item.displayReplyForm(html);
+  }
+
+  async function copyAnswer() {
+    try {
+      await navigator.clipboard.writeText($("answer").value);
+      setStatus("In die Zwischenablage kopiert.");
+    } catch (e) {
+      $("answer").select();
+      setStatus("Bitte mit Strg+C kopieren.", true);
+    }
+  }
+
+  Office.onReady(function (info) {
+    if (info.host !== Office.HostType.Outlook) return;
+    $("create").addEventListener("click", createAnswer);
+    $("open").addEventListener("click", openReply);
+    $("copy").addEventListener("click", copyAnswer);
+    Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, loadItem);
+    loadItem();
+  });
+</script>
+</body>
+</html>
