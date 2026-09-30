@@ -6,58 +6,84 @@
 <title>Raisch Antwort-Assistent</title>
 <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
 <style>
-  :root { --ink:#2b2320; --muted:#6b625d; --line:#d9d2cc; --accent:#1f4e79; --bg:#ffffff; --field:#faf8f6; }
+  :root {
+    --bg:#efe8e0; --card:#ffffff; --ink:#1f1b18; --muted:#7a6f66; --line:#e3dbd2;
+    --field:#faf7f3; --red:#c8102e; --red-dark:#a30d26; --head:#1c1917; --head-ink:#ffffff; --head-sub:#b9aea5;
+  }
   @media (prefers-color-scheme: dark) {
-    :root { --ink:#f1ece8; --muted:#a89f99; --line:#4a423d; --accent:#7db3e6; --bg:#1f1b19; --field:#2a2522; }
+    :root {
+      --bg:#141210; --card:#221e1b; --ink:#f3ede7; --muted:#a89f97; --line:#3a3430;
+      --field:#1a1714; --red:#e0384f; --red-dark:#c8102e; --head:#0d0b0a; --head-sub:#a89f97;
+    }
   }
   * { box-sizing: border-box; }
-  body { margin:0; padding:16px; background:var(--bg); color:var(--ink); font:14px/1.45 "Segoe UI", system-ui, sans-serif; }
-  .head { display:flex; align-items:center; gap:12px; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--line); }
-  .head img { height:56px; width:auto; max-width:45%; object-fit:contain; background:#fff; border-radius:50%; }
-  h1 { font-size:17px; margin:0 0 4px; }
-  p.sub { margin:0 0 16px; color:var(--muted); }
-  label { display:block; font-weight:600; margin:14px 0 4px; }
-  textarea { width:100%; padding:8px; border:1px solid var(--line); border-radius:4px; background:var(--field); color:var(--ink); font:inherit; resize:vertical; }
-  textarea:focus-visible, button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  html, body { margin:0; }
+  body { background:var(--bg); color:var(--ink); font:16px/1.5 Candara, Calibri, "Segoe UI", sans-serif; min-height:100vh; }
+
+  .head { display:flex; align-items:center; gap:12px; padding:14px 16px; background:var(--head); color:var(--head-ink); }
+  .head img { height:46px; width:46px; object-fit:contain; background:#fff; border-radius:50%; flex:none; }
+  .head h1 { margin:0; font-size:22px; line-height:1.2; font-weight:700; }
+  .head p { margin:2px 0 0; font-size:14px; color:var(--head-sub); }
+
+  main { padding:14px; display:grid; gap:12px; }
+  .card { background:var(--card); border-radius:10px; padding:14px; box-shadow:0 1px 2px rgba(31,27,24,.08); }
+  .card.mail { border-left:4px solid var(--red); }
+  .card h2 { margin:0 0 8px; font-size:18px; font-weight:700; }
+  .mailsub { color:var(--muted); font-size:14px; margin-bottom:2px; }
+  #mailinfo { font-weight:700; overflow-wrap:anywhere; }
+
+  textarea { width:100%; padding:10px; border:1px solid var(--line); border-radius:8px; background:var(--field); color:var(--ink); font:inherit; resize:vertical; }
+  textarea::placeholder { color:var(--muted); }
+  textarea:focus-visible, button:focus-visible { outline:2px solid var(--red); outline-offset:2px; }
+
   .row { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
-  button { padding:8px 12px; border-radius:4px; border:1px solid var(--accent); background:var(--accent); color:#fff; font:inherit; cursor:pointer; }
-  @media (prefers-color-scheme: dark) { button { color:#10202e; } }
-  button.secondary { background:transparent; color:var(--accent); }
-  button:disabled { opacity:.5; cursor:default; }
-  #mailinfo { padding:8px; border-left:3px solid var(--line); color:var(--muted); margin-top:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  #status { min-height:20px; margin-top:10px; color:var(--muted); }
-  #status.error { color:#b3261e; }
+  button { padding:9px 16px; border-radius:8px; border:1px solid var(--red); background:var(--red); color:#fff; font:inherit; font-weight:700; cursor:pointer; }
+  button:hover:not(:disabled) { background:var(--red-dark); border-color:var(--red-dark); }
+  button.secondary { background:transparent; color:var(--ink); border-color:var(--line); }
+  button.secondary:hover:not(:disabled) { background:var(--field); border-color:var(--muted); }
+  button:disabled { opacity:.45; cursor:default; }
+
+  #status { min-height:20px; margin-top:10px; color:var(--muted); font-size:14.5px; }
+  #status.error { color:var(--red); font-weight:700; }
+  @media (prefers-reduced-motion: no-preference) { button { transition: background .15s, border-color .15s; } }
 </style>
 </head>
 <body>
-  <div class="head">
+  <header class="head">
     <img src="logo.png" alt="Bäckerei &amp; Konditorei Raisch" onerror="this.style.display='none'">
     <div>
       <h1>Antwort-Assistent</h1>
-      <p class="sub" style="margin:0">Stichwörter eingeben, Antwort erstellen, prüfen, senden.</p>
+      <p>Bäckerei &amp; Konditorei Raisch</p>
     </div>
-  </div>
+  </header>
 
-  <div id="mailinfo">Keine Mail ausgewählt</div>
+  <main>
+    <section class="card mail">
+      <div class="mailsub">Ausgewählte Mail</div>
+      <div id="mailinfo">Keine Mail ausgewählt</div>
+    </section>
 
-  <label for="keywords">Stichwörter für die Antwort</label>
-  <textarea id="keywords" rows="3" placeholder="z. B. Bestellung ist vorgemerkt, Abholung Freitag ab 8 Uhr"></textarea>
+    <section class="card">
+      <h2>Stichwörter für die Antwort</h2>
+      <textarea id="keywords" rows="3" aria-label="Stichwörter für die Antwort" placeholder="z. B. Bestellung ist vorgemerkt, Abholung Freitag ab 8 Uhr"></textarea>
+      <div class="row">
+        <button id="create" disabled>Antwort erstellen</button>
+      </div>
+      <div id="status" role="status"></div>
+    </section>
 
-  <div class="row">
-    <button id="create" disabled>Antwort erstellen</button>
-  </div>
-  <div id="status" role="status"></div>
-
-  <label for="answer">Antwortvorschlag</label>
-  <textarea id="answer" rows="10"></textarea>
-
-  <div class="row">
-    <button id="open" class="secondary" disabled>Als Antwort öffnen</button>
-    <button id="copy" class="secondary" disabled>Kopieren</button>
-  </div>
+    <section class="card">
+      <h2>Antwortvorschlag</h2>
+      <textarea id="answer" rows="10" aria-label="Antwortvorschlag"></textarea>
+      <div class="row">
+        <button id="open" class="secondary" disabled>Als Antwort öffnen</button>
+        <button id="copy" class="secondary" disabled>Kopieren</button>
+      </div>
+    </section>
+  </main>
 
 <script>
-  // >>> HIER die Production-URL des n8n-Webhooks eintragen (nicht /webhook-test/) <<<
+  // Production-URL des n8n-Webhooks (Gemini-Flow)
   const WEBHOOK_URL = "https://n8n.raischflow.com/webhook/Raisch-Mail-Assistent";
 
   const $ = (id) => document.getElementById(id);
