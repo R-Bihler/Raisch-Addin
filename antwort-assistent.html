@@ -101,42 +101,104 @@
     $("answer").value = "";
     $("open").disabled = true;
     $("copy").disabled = true;
+
     if (!item) {
       $("mailinfo").textContent = "Keine Mail ausgewählt";
       $("create").disabled = true;
+      setStatus("Bitte eine E-Mail öffnen.", true);
       return;
     }
+
     $("mailinfo").textContent = item.subject || "(ohne Betreff)";
-    item.body.getAsync(Office.CoreType.Text, function (res) {
+    $("create").disabled = true;
+    setStatus("Mail wird geladen ...");
+
+    // Office.CoercionType.Text ist für Mailbox-Items die kompatiblere Variante.
+    item.body.getAsync(Office.CoercionType.Text, function (res) {
       if (res.status === Office.AsyncResultStatus.Succeeded) {
-        mailText = "Betreff: " + (item.subject || "") + "\n\n" + res.value;
-        $("create").disabled = false;
-        setStatus("");
+        const body = (res.value || "").trim();
+        mailText = "Betreff: " + (item.subject || "") + "\n\n" + body;
+
+        if (body) {
+          $("create").disabled = false;
+          setStatus("Bereit.");
+        } else {
+          $("create").disabled = true;
+          setStatus("Die E-Mail enthält keinen lesbaren Text.", true);
+        }
       } else {
         $("create").disabled = true;
-        setStatus("Mailtext konnte nicht gelesen werden.", true);
+        const detail = res.error && res.error.message
+          ? " (" + res.error.message + ")"
+          : "";
+        setStatus("Mailtext konnte nicht gelesen werden." + detail, true);
       }
     });
   }
 
   async function createAnswer() {
+    const keywords = $("keywords").value.trim();
+
+    if (!mailText) {
+      setStatus("Die E-Mail ist noch nicht vollständig geladen.", true);
+      return;
+    }
+    if (!keywords) {
+      setStatus("Bitte zuerst Stichwörter für die Antwort eingeben.", true);
+      $("keywords").focus();
+      return;
+    }
+
     $("create").disabled = true;
+    $("open").disabled = true;
+    $("copy").disabled = true;
     setStatus("Antwort wird erstellt ...");
+
     try {
       const r = await fetch(WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mail: mailText, keywords: $("keywords").value })
+        body: JSON.stringify({ mail: mailText, keywords: keywords })
       });
-      if (!r.ok) throw new Error("Server antwortet mit Status " + r.status);
-      $("answer").value = (await r.text()).trim();
+
+      if (!r.ok) {
+        const serverText = (await r.text()).trim();
+        throw new Error("Server antwortet mit Status " + r.status +
+          (serverText ? ": " + serverText.slice(0, 250) : ""));
+      }
+
+      const raw = (await r.text()).trim();
+      let answer = raw;
+
+      // Falls n8n JSON statt reinem Text zurückgibt, typische Felder erkennen.
+      try {
+        const data = JSON.parse(raw);
+        answer =
+          data.answer ??
+          data.antwort ??
+          data.output ??
+          data.text ??
+          data.message ??
+          raw;
+        if (typeof answer !== "string") {
+          answer = JSON.stringify(answer, null, 2);
+        }
+      } catch (_) {
+        // Reiner Text ist ebenfalls korrekt.
+      }
+
+      answer = answer.trim();
+      if (!answer) throw new Error("n8n hat eine leere Antwort zurückgegeben.");
+
+      $("answer").value = answer;
       $("open").disabled = false;
       $("copy").disabled = false;
       setStatus("Fertig. Bitte vor dem Senden prüfen.");
     } catch (e) {
-      setStatus("Fehler: " + e.message, true);
+      setStatus("Fehler: " + (e && e.message ? e.message : e), true);
+    } finally {
+      $("create").disabled = !mailText;
     }
-    $("create").disabled = false;
   }
 
   function openReply() {
@@ -157,12 +219,31 @@
   }
 
   Office.onReady(function (info) {
-    if (info.host !== Office.HostType.Outlook) return;
+    if (info.host !== Office.HostType.Outlook) {
+      setStatus("Das Add-in wurde nicht in Outlook geöffnet.", true);
+      return;
+    }
+
     $("create").addEventListener("click", createAnswer);
     $("open").addEventListener("click", openReply);
     $("copy").addEventListener("click", copyAnswer);
-    Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, loadItem);
+
+    if (Office.context.mailbox && Office.context.mailbox.addHandlerAsync) {
+      Office.context.mailbox.addHandlerAsync(
+        Office.EventType.ItemChanged,
+        loadItem,
+        function (result) {
+          if (result.status === Office.AsyncResultStatus.Failed) {
+            console.warn("ItemChanged konnte nicht registriert werden:", result.error);
+          }
+        }
+      );
+    }
+
     loadItem();
+  }).catch(function (e) {
+    setStatus("Outlook konnte nicht initialisiert werden: " +
+      (e && e.message ? e.message : e), true);
   });
 </script>
 </body>
