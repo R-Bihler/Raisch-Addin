@@ -12,6 +12,8 @@
   }
   * { box-sizing: border-box; }
   body { margin:0; padding:16px; background:var(--bg); color:var(--ink); font:14px/1.45 "Segoe UI", system-ui, sans-serif; }
+  .head { display:flex; align-items:center; gap:12px; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--line); }
+  .head img { height:56px; width:auto; max-width:45%; object-fit:contain; background:#fff; border-radius:50%; }
   h1 { font-size:17px; margin:0 0 4px; }
   p.sub { margin:0 0 16px; color:var(--muted); }
   label { display:block; font-weight:600; margin:14px 0 4px; }
@@ -28,8 +30,13 @@
 </style>
 </head>
 <body>
-  <h1>Antwort-Assistent</h1>
-  <p class="sub">Stichwörter eingeben, Antwort erstellen lassen, prüfen, senden.</p>
+  <div class="head">
+    <img src="logo.png" alt="Bäckerei &amp; Konditorei Raisch" onerror="this.style.display='none'">
+    <div>
+      <h1>Antwort-Assistent</h1>
+      <p class="sub" style="margin:0">Stichwörter eingeben, Antwort erstellen, prüfen, senden.</p>
+    </div>
+  </div>
 
   <div id="mailinfo">Keine Mail ausgewählt</div>
 
