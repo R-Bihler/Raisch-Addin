@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+           xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+           xsi:type="TaskPaneApp">
+  <Id>d196a03b-57da-4f87-9297-6ea6e9980fd3</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>Bäckerei &amp; Konditorei Raisch GmbH &amp; Co. KG</ProviderName>
+  <DefaultLocale>de-DE</DefaultLocale>
+  <DisplayName DefaultValue="Raisch Schriftverkehr-Assistent"/>
+  <Description DefaultValue="Erstellt professionelle Kundenanschreiben und fügt sie direkt in Microsoft Word ein."/>
+  <IconUrl DefaultValue="https://r-bihler.github.io/Raisch-Addin/logo.png"/>
+  <SupportUrl DefaultValue="https://r-bihler.github.io/Raisch-Addin/"/>
+  <AppDomains>
+    <AppDomain>https://r-bihler.github.io</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Document"/>
+  </Hosts>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://r-bihler.github.io/Raisch-Addin/raisch-word-assistent.html"/>
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Hosts>
+      <Host xsi:type="Document">
+        <DesktopFormFactor>
+          <GetStarted>
+            <Title resid="GetStarted.Title"/>
+            <Description resid="GetStarted.Description"/>
+            <LearnMoreUrl resid="GetStarted.Url"/>
+          </GetStarted>
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="Raisch.Group">
+                <Label resid="Raisch.GroupLabel"/>
+                <Icon>
+                  <bt:Image size="16" resid="Raisch.Icon16"/>
+                  <bt:Image size="32" resid="Raisch.Icon32"/>
+                  <bt:Image size="80" resid="Raisch.Icon80"/>
+                </Icon>
+                <Control xsi:type="Button" id="Raisch.OpenButton">
+                  <Label resid="Raisch.ButtonLabel"/>
+                  <Supertip>
+                    <Title resid="Raisch.ButtonLabel"/>
+                    <Description resid="Raisch.ButtonDescription"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Raisch.Icon16"/>
+                    <bt:Image size="32" resid="Raisch.Icon32"/>
+                    <bt:Image size="80" resid="Raisch.Icon80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>Raisch.Taskpane</TaskpaneId>
+                    <SourceLocation resid="Raisch.TaskpaneUrl"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Raisch.Icon16" DefaultValue="https://r-bihler.github.io/Raisch-Addin/logo.png"/>
+        <bt:Image id="Raisch.Icon32" DefaultValue="https://r-bihler.github.io/Raisch-Addin/logo.png"/>
+        <bt:Image id="Raisch.Icon80" DefaultValue="https://r-bihler.github.io/Raisch-Addin/logo.png"/>
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="GetStarted.Url" DefaultValue="https://r-bihler.github.io/Raisch-Addin/"/>
+        <bt:Url id="Raisch.TaskpaneUrl" DefaultValue="https://r-bihler.github.io/Raisch-Addin/raisch-word-assistent.html"/>
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="GetStarted.Title" DefaultValue="Raisch Schriftverkehr-Assistent"/>
+        <bt:String id="Raisch.GroupLabel" DefaultValue="Raisch"/>
+        <bt:String id="Raisch.ButtonLabel" DefaultValue="Schriftverkehr-Assistent"/>
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="GetStarted.Description" DefaultValue="Erstellen Sie Kundenanschreiben direkt in Word."/>
+        <bt:String id="Raisch.ButtonDescription" DefaultValue="Öffnet den Raisch Schriftverkehr-Assistenten."/>
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>
